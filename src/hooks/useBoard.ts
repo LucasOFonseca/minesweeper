@@ -1,3 +1,7 @@
+import {useEffect, useState} from 'react';
+import {Alert} from 'react-native';
+import {gameParams} from '../configs';
+
 export interface BoardField {
   row: number;
   column: number;
@@ -8,54 +12,70 @@ export interface BoardField {
   exploded?: boolean;
 }
 
-export function useBoard() {
-  const initializeBoard = (rows: number, columns: number) =>
-    Array(rows)
-      .fill(0)
-      .map((_, row) =>
-        Array(columns)
-          .fill(0)
-          .map<BoardField>((__, column) => ({
-            row,
-            column,
-            opened: false,
-            nearMines: 0,
-            flagged: false,
-            mined: false,
-            exploded: false,
-          })),
-      );
+const getMinesAmount = () => {
+  const cols = gameParams.getColumnsAmount();
+  const rows = gameParams.getRowsAmount();
 
-  const spreadMines = (board: BoardField[][], minesAmount: number) => {
-    const rows = board.length;
-    const columns = board[0].length;
+  return Math.ceil(cols * rows * gameParams.difficultLevel);
+};
 
-    let minesPlanted = 0;
+const initializeBoard = (rows: number, columns: number) =>
+  Array(rows)
+    .fill(0)
+    .map((_, row) =>
+      Array(columns)
+        .fill(0)
+        .map<BoardField>((__, column) => ({
+          row,
+          column,
+          opened: false,
+          nearMines: 0,
+          flagged: false,
+          mined: false,
+          exploded: false,
+        })),
+    );
 
-    while (minesPlanted < minesAmount) {
-      const row = parseInt(String(Math.random() * rows), 10);
-      const column = parseInt(String(Math.random() * columns), 10);
+const spreadMines = (board: BoardField[][], minesAmount: number) => {
+  const rows = board.length;
+  const columns = board[0].length;
 
-      if (!board[row][column].mined) {
-        board[row][column].mined = true;
+  let minesPlanted = 0;
 
-        minesPlanted += 1;
-      }
+  while (minesPlanted < minesAmount) {
+    const row = parseInt(String(Math.random() * rows), 10);
+    const column = parseInt(String(Math.random() * columns), 10);
+
+    if (!board[row][column].mined) {
+      board[row][column].mined = true;
+
+      minesPlanted += 1;
     }
-  };
+  }
+};
 
-  const create = (rows: number, columns: number, minesAmount: number) => {
-    const board = initializeBoard(rows, columns);
+const create = (rows: number, columns: number, minesAmount: number) => {
+  const board = initializeBoard(rows, columns);
 
-    spreadMines(board, minesAmount);
+  spreadMines(board, minesAmount);
 
-    return board;
-  };
+  return board;
+};
 
-  const cloneBoard = (board: BoardField[][]) =>
-    board.map(row => row.map(field => ({...field})));
+export function useBoard() {
+  const [won, setWon] = useState(false);
+  const [lost, setLost] = useState(false);
+  const [board, setBoard] = useState<BoardField[][]>(
+    create(
+      gameParams.getRowsAmount(),
+      gameParams.getColumnsAmount(),
+      getMinesAmount(),
+    ),
+  );
 
-  const getNeighbors = (board: BoardField[][], row: number, column: number) => {
+  const cloneBoard = () => board.map(row => row.map(field => ({...field})));
+
+  const getNeighbors = (b: BoardField[][], row: number, column: number) => {
     const rows = [row - 1, row, row + 1];
     const columns = [column - 1, column, column + 1];
 
@@ -64,28 +84,24 @@ export function useBoard() {
     rows.forEach(r => {
       columns.forEach(c => {
         const different = r !== row || c !== column;
-        const validRow = r >= 0 && r < board.length;
-        const validColumn = c >= 0 && c < board[0].length;
+        const validRow = r >= 0 && r < b.length;
+        const validColumn = c >= 0 && c < b[0].length;
 
-        if (different && validRow && validColumn) neighbors.push(board[r][c]);
+        if (different && validRow && validColumn) neighbors.push(b[r][c]);
       });
     });
 
     return neighbors;
   };
 
-  const safeNeighborhood = (
-    board: BoardField[][],
-    row: number,
-    column: number,
-  ) =>
-    getNeighbors(board, row, column).reduce(
+  const safeNeighborhood = (b: BoardField[][], row: number, column: number) =>
+    getNeighbors(b, row, column).reduce(
       (acc, neighbor) => acc && !neighbor.mined,
       true,
     );
 
-  const openField = (board: BoardField[][], row: number, column: number) => {
-    const field = board[row][column];
+  const openField = (b: BoardField[][], row: number, column: number) => {
+    const field = b[row][column];
 
     if (field.opened) return;
 
@@ -94,44 +110,83 @@ export function useBoard() {
     if (field.mined) {
       field.exploded = true;
 
+      b[row][column] = field;
+
+      setLost(true);
+
       return;
     }
 
-    const neighbors = getNeighbors(board, row, column);
+    const neighbors = getNeighbors(b, row, column);
 
-    if (safeNeighborhood(board, row, column)) {
-      neighbors.forEach(n => openField(board, n.row, n.column));
+    if (safeNeighborhood(b, row, column)) {
+      neighbors.forEach(n => openField(b, n.row, n.column));
 
       return;
     }
 
     field.nearMines = neighbors.filter(n => n.mined).length;
+
+    b[row][column] = field;
+
+    if (getFields(b).filter(pending).length === 0) setWon(true);
   };
 
-  const getFields = (board: BoardField[][]) =>
-    board.reduce((a, b) => [...a, ...b]);
+  const handleOpenField = (row: number, column: number) => {
+    if (won || lost) return;
 
-  const hasExplosion = (board: BoardField[][]) =>
-    getFields(board).filter(field => field.exploded).length > 0;
+    const boardClone = cloneBoard();
+
+    openField(boardClone, row, column);
+
+    setBoard(boardClone);
+  };
+
+  const getFields = (b: BoardField[][]) => b.reduce((a, c) => [...a, ...c]);
 
   const pending = (field: BoardField) =>
     (field.mined && !field.flagged) ||
     (!field.mined && !field.opened && field.flagged);
 
-  const won = (board: BoardField[][]) =>
-    getFields(board).filter(pending).length === 0;
+  const showMines = () => {
+    const boardClone = cloneBoard();
 
-  const showMines = (board: BoardField[][]) =>
-    getFields(board)
+    getFields(boardClone)
       .filter(field => field.mined)
       .forEach(field => (field.opened = true));
 
+    setBoard(boardClone);
+  };
+
+  const handleInvertFlag = (row: number, column: number) => {
+    const boardClone = cloneBoard();
+
+    const field = boardClone[row][column];
+
+    field.flagged = !field.flagged;
+
+    setWon(getFields(boardClone).filter(pending).length === 0);
+
+    setBoard(boardClone);
+  };
+
+  useEffect(() => {
+    if (lost) {
+      showMines();
+
+      Alert.alert('Perdeu', 'Que pena, você perdeu :(');
+    }
+  }, [lost]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (won) Alert.alert('Parabéns', 'Você venceu!');
+  }, [won]);
+
   return {
-    create,
-    cloneBoard,
-    openField,
-    hasExplosion,
+    board,
     won,
-    showMines,
+    lost,
+    handleOpenField,
+    handleInvertFlag,
   };
 }

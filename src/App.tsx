@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React from 'react';
 import {SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
 
 import {MineField} from './components/Field/components/MineField';
@@ -14,29 +14,12 @@ const styles = StyleSheet.create({
 
   boardContainer: {
     alignItems: 'center',
-    backgroundColor: '#AAA',
+    backgroundColor: '#777',
   },
 });
 
 function App(): React.JSX.Element {
-  const {create} = useBoard();
-
-  const getMinesAmount = () => {
-    const cols = gameParams.getColumnsAmount();
-    const rows = gameParams.getRowsAmount();
-
-    return Math.ceil(cols * rows * gameParams.difficultLevel);
-  };
-
-  const board = useMemo(
-    () =>
-      create(
-        gameParams.getRowsAmount(),
-        gameParams.getColumnsAmount(),
-        getMinesAmount(),
-      ),
-    [], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const {board, handleOpenField, handleInvertFlag} = useBoard();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -50,7 +33,11 @@ function App(): React.JSX.Element {
       </Text>
 
       <View style={styles.boardContainer}>
-        <MineField board={board} />
+        <MineField
+          board={board}
+          onOpenField={handleOpenField}
+          onSelectField={handleInvertFlag}
+        />
       </View>
     </SafeAreaView>
   );

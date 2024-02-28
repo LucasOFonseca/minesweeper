@@ -1,5 +1,12 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {StyleProp, StyleSheet, Text, View, ViewStyle} from 'react-native';
+import {
+  StyleProp,
+  StyleSheet,
+  Text,
+  TouchableWithoutFeedback,
+  View,
+  ViewStyle,
+} from 'react-native';
 import {gameParams} from '../../configs';
 import {Flag} from './components/Flag';
 import {Mine} from './components/Mine';
@@ -46,6 +53,8 @@ interface FieldProps {
   opened?: boolean;
   flagged?: boolean;
   nearMines: number;
+  onOpen: () => void;
+  onSelect: () => void;
 }
 
 export const Field: React.FC<FieldProps> = ({
@@ -54,6 +63,8 @@ export const Field: React.FC<FieldProps> = ({
   opened,
   flagged,
   nearMines,
+  onOpen,
+  onSelect,
 }) => {
   const [fieldStyles, setFieldStyles] = useState<StyleProp<ViewStyle>[]>([
     styles.container,
@@ -85,18 +96,20 @@ export const Field: React.FC<FieldProps> = ({
   }, [mined, opened, exploded, flagged]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <View style={fieldStyles}>
-      {opened ? (
-        <>
-          {mined ? (
-            <Mine />
-          ) : nearMines > 0 ? (
-            <Text style={[styles.label, {color}]}>{nearMines}</Text>
-          ) : null}
-        </>
-      ) : (
-        flagged && <Flag />
-      )}
-    </View>
+    <TouchableWithoutFeedback onPress={onOpen} onLongPress={onSelect}>
+      <View style={fieldStyles}>
+        {opened ? (
+          <>
+            {mined ? (
+              <Mine />
+            ) : nearMines > 0 ? (
+              <Text style={[styles.label, {color}]}>{nearMines}</Text>
+            ) : null}
+          </>
+        ) : (
+          flagged && <Flag />
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
