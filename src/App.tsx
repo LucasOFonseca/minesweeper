@@ -19,7 +19,7 @@ const styles = StyleSheet.create({
 });
 
 function App(): React.JSX.Element {
-  const createBoard = useBoard();
+  const {create} = useBoard();
 
   const getMinesAmount = () => {
     const cols = gameParams.getColumnsAmount();
@@ -30,7 +30,7 @@ function App(): React.JSX.Element {
 
   const board = useMemo(
     () =>
-      createBoard(
+      create(
         gameParams.getRowsAmount(),
         gameParams.getColumnsAmount(),
         getMinesAmount(),
