@@ -1,13 +1,14 @@
-import React from 'react';
-import {SafeAreaView, StatusBar, StyleSheet, Text, View} from 'react-native';
+import React, {useState} from 'react';
+import {SafeAreaView, StatusBar, StyleSheet, View} from 'react-native';
 
 import {MineField} from './components/Field/components/MineField';
+import {Header} from './components/Header';
 import {gameParams} from './configs';
 import {useBoard} from './hooks';
+import {LevelSelectionModal} from './screens/LevelSelectionModal';
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 30,
     flex: 1,
     justifyContent: 'flex-end',
   },
@@ -19,27 +20,44 @@ const styles = StyleSheet.create({
 });
 
 function App(): React.JSX.Element {
-  const {board, handleOpenField, handleInvertFlag} = useBoard();
+  const {board, newGame, handleOpenField, handleInvertFlag, getFlagsInUse} =
+    useBoard();
+
+  const [showLevelSelectionModal, setShowLevelSelectionModal] = useState(false);
+
+  const onLevelSelected = (level: number) => {
+    gameParams.difficultLevel = level;
+
+    setShowLevelSelectionModal(false);
+    newGame();
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar hidden />
+    <>
+      <LevelSelectionModal
+        isVisible={showLevelSelectionModal}
+        onLevelSelected={onLevelSelected}
+        onCancel={() => setShowLevelSelectionModal(false)}
+      />
 
-      <Text>Iniciando o Mines!</Text>
+      <SafeAreaView style={styles.container}>
+        <StatusBar hidden />
 
-      <Text>
-        Tamanho da grade: {gameParams.getRowsAmount()}x
-        {gameParams.getColumnsAmount()}
-      </Text>
-
-      <View style={styles.boardContainer}>
-        <MineField
-          board={board}
-          onOpenField={handleOpenField}
-          onSelectField={handleInvertFlag}
+        <Header
+          flagsInUse={getFlagsInUse()}
+          onFlagPress={() => setShowLevelSelectionModal(true)}
+          onNewGame={newGame}
         />
-      </View>
-    </SafeAreaView>
+
+        <View style={styles.boardContainer}>
+          <MineField
+            board={board}
+            onOpenField={handleOpenField}
+            onSelectField={handleInvertFlag}
+          />
+        </View>
+      </SafeAreaView>
+    </>
   );
 }
 

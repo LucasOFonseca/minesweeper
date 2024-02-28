@@ -92,7 +92,8 @@ export const Field: React.FC<FieldProps> = ({
     if (mined && !fieldStyles.some(style => style === styles.mined))
       setFieldStyles(curr => [...curr, styles.mined]);
 
-    if (!opened && !exploded) setFieldStyles(curr => [...curr, styles.regular]);
+    if (!opened && !exploded)
+      setFieldStyles([styles.container, styles.regular]);
   }, [mined, opened, exploded, flagged]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

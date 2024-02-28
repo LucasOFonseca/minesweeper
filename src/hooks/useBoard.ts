@@ -12,7 +12,7 @@ export interface BoardField {
   exploded?: boolean;
 }
 
-const getMinesAmount = () => {
+export const getMinesAmount = () => {
   const cols = gameParams.getColumnsAmount();
   const rows = gameParams.getRowsAmount();
 
@@ -72,6 +72,18 @@ export function useBoard() {
       getMinesAmount(),
     ),
   );
+
+  const newGame = () => {
+    setWon(false);
+    setLost(false);
+    setBoard(
+      create(
+        gameParams.getRowsAmount(),
+        gameParams.getColumnsAmount(),
+        getMinesAmount(),
+      ),
+    );
+  };
 
   const cloneBoard = () => board.map(row => row.map(field => ({...field})));
 
@@ -170,6 +182,9 @@ export function useBoard() {
     setBoard(boardClone);
   };
 
+  const getFlagsInUse = () =>
+    getFields(board).filter(field => field.flagged).length;
+
   useEffect(() => {
     if (lost) {
       showMines();
@@ -186,7 +201,9 @@ export function useBoard() {
     board,
     won,
     lost,
+    newGame,
     handleOpenField,
     handleInvertFlag,
+    getFlagsInUse,
   };
 }
